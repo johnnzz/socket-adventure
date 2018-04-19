@@ -261,6 +261,8 @@ class Server(object):
             except Exception as err:
                 new_room = False
                 self.output_buffer = "\n\nYou narrowly avoid stepping in a tar pit!\n"
+        else:
+            self.output_buffer = "\n\nYou dance wildly.\n"
 
 
     def teleport(self, argument):
@@ -355,7 +357,8 @@ class Server(object):
             }.get(command)(arguments)
         except TypeError:
             # bad command
-            self.output_buffer = "\n\n{}!????  Adjust your Babblefish!\n".format(self.input_buffer)
+            self.say("hack " + self.input_buffer)
+            #self.output_buffer = "\n\n{}!????  Adjust your Babblefish!\n".format(self.input_buffer)
         except Exception as err:
             # bad programmer
             self.output_buffer = "\n\nFrozzle, Frozzle, --{}--, when {}!\n".format(err,self.input_buffer)
