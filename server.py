@@ -1,5 +1,8 @@
 import socket
-
+try:
+    from chatterbot import ChatBot
+except Exception as err:
+    print("To get full functionality, do a 'pip install chatterbot'")
 
 class Server(object):
     """
@@ -90,6 +93,18 @@ class Server(object):
         s.connect(("8.8.8.8", 80))
         self.myaddr = s.getsockname()[0]
         s.close()
+
+        try:
+            self.chatbot = ChatBot(
+                'Adventure Venture',
+                trainer='chatterbot.trainers.ChatterBotCorpusTrainer'
+            )
+
+            # Train based on the english corpus
+            self.chatbot.train("chatterbot.corpus.english")
+        except Exception as err:
+            # we've already complained, get over it
+            pass
 
         # announce address/port
         print("Server IP address is {} on port {}".format(self.myaddr, self.port))
@@ -243,8 +258,11 @@ class Server(object):
         :param argument: str
         :return: None
         """
-
-        self.output_buffer = '\n\nYou say, "{}".  (wabba wabba, whee, wok!)\n'.format(" ".join(argument))
+        try:
+            simon_sez = self.chatbot.get_response(self.input_buffer)
+            self.output_buffer = "\n\n{}\n".format(simon_sez)
+        except Exception as err:
+            self.output_buffer = '\n\nYou say, "{}".  (wabba wabba, whee, wok!)\n'.format(" ".join(argument))
 
 
     def quit(self, argument):
