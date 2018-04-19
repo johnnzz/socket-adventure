@@ -246,17 +246,21 @@ class Server(object):
         """
 
         # in which direction do they wish to move
-        direction = argument[0]
+        if argument:
+            direction = argument[0]
 
-        # what room is in that direction
-        new_room = self.rooms[self.room][direction]
-
-        # if there is no room in the desired direction, the path will be false
-        if new_room:
-            self.room = new_room
-            self.output_buffer = self.room_description(self.room)
-        else:
-            self.output_buffer = "\n\nOuch!  You ran into a wall!\n"
+            # what room is in that direction
+            try:
+                new_room = self.rooms[self.room][direction]
+                # if there is no room in the desired direction, the path will be false
+                if new_room:
+                    self.room = new_room
+                    self.output_buffer = self.room_description(self.room)
+                else:
+                    self.output_buffer = "\n\nOuch!  You ran into a wall!\n"
+            except Exception as err:
+                new_room = False
+                self.output_buffer = "\n\nYou narrowly avoid stepping in a tar pit!\n"
 
 
     def teleport(self, argument):
@@ -295,6 +299,10 @@ class Server(object):
             self.output_buffer = "\n\n{}\n".format(simon_sez)
         except Exception as err:
             self.output_buffer = '\n\nYou say, "{}".  (wabba wabba, whee, wok!)\n'.format(" ".join(argument))
+
+
+    def exit(self, argument):
+        self.quit(argument)
 
 
     def quit(self, argument):
