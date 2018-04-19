@@ -14,8 +14,13 @@ while True:
     response = client_socket.recv(4096).decode()
     print(response)
 
-    if response == "":
+    if "Goodbye!" in response:
         break
 
-    my_message = input("> ").encode('utf-8')
+    # protect against empty input
+    my_input = ""
+    while my_input == "":
+        my_input = input("> ")
+
+    my_message = my_input.encode('utf-8')
     client_socket.sendall(my_message)

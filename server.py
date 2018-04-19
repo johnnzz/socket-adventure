@@ -52,41 +52,38 @@ class Server(object):
         self.client_connection = None
         self.port = port
         self.room = "0"
-        self.rooms = { "0": { "name": "The Foyer",
-                              "desc": "a grand foyer, all pink.",
+        self.lit_candle = False
+        self.dark_count = 4
+        self.objects = { "candle": "2" }
+        self.rooms = { "0": { "name": "Foyer",
+                              "desc": "a grand foyer, all pink",
                               "north": "3",
                               "south": False,
                               "east": "2",
                               "west": "1",
-                              "things": [] },
-                       "1": { "name": "The Kitchen",
-                              "desc": "a large kitchen, dirty and gray.",
+                              "dark": False },
+                       "1": { "name": "Kitchen",
+                              "desc": "a large kitchen, dirty and gray",
                               "north": False,
                               "south": False,
                               "east": "0",
                               "west": False,
-                              "things": [] },
-                       "2": { "name": "The Library",
-                              "desc": "a musty library, with wooden floors.",
+                              "dark": True },
+                       "2": { "name": "Library",
+                              "desc": "a musty library, with wooden floors",
                               "north": False,
                               "south": False,
                               "east": False,
                               "west": "0",
-                              "things": [] },
-                       "3": { "name": "The Fountain",
-                              "desc": "a grand fountain, broken and dry.",
+                              "dark": False },
+                       "3": { "name": "Fountain",
+                              "desc": "a grand fountain, broken and dry",
                               "north": False,
                               "south": "0",
                               "east": False,
                               "west": False,
-                              "things": [] },
+                              "dark": False },
                                }
-
-    def connect(self):
-        self.socket = socket.socket(
-            socket.AF_INET,
-            socket.SOCK_STREAM,
-            socket.IPPROTO_TCP)
 
         # hack to figure out my outgoing ip address
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -94,13 +91,30 @@ class Server(object):
         self.myaddr = s.getsockname()[0]
         s.close()
 
+        # announce address/port
+        print("Server IP address is {} on port {}".format(self.myaddr, self.port))
+
+
+    def connect(self):
+        """
+        start accepting connections
+        """
+        self.socket = socket.socket(
+            socket.AF_INET,
+            socket.SOCK_STREAM,
+            socket.IPPROTO_TCP)
+        self.socket.setsockopt(
+            socket.SOL_SOCKET,
+            socket.SO_REUSEADDR, 1)
+
         address = ('0.0.0.0', self.port)
         self.socket.bind(address)
         self.socket.listen(1)
 
         self.client_connection, address = self.socket.accept()
 
-        print("server running at {} on {}".format(self.myaddr, self.port))
+        print("Server: listening!")
+
 
     def room_description(self, room_number):
         """
@@ -114,9 +128,42 @@ class Server(object):
         :return: str
         """
 
-        # TODO: YOUR CODE HERE
+        # in case we decide to switch to descriptive room identifiers, let's 
+        # consider room_number a string
+        room_number = str(room_number)
 
-        return 'You are in {name}.  You see {desc}'.format(**self.rooms[str(room_number)])
+        # report the room name
+        room_info = '\n\nYou are in the {name}.'.format(**self.rooms[room_number])
+
+        # is it dark?
+        if self.rooms[room_number]["dark"]:
+            room_info += '  It is dark'
+            if self.lit_candle:
+                room_info += ' but the candle lights the way.'
+            else:
+                room_info += '.'
+
+        # add the room desc
+        room_info += '  You see {desc}.'.format(**self.rooms[room_number])
+
+        # add the objects that are present
+        stuff = self.get_inv(room_number)
+        if stuff:
+            room_info += "\n\nThe following items are present: {}.".format(", ".join(stuff))
+
+        # add directionals
+        paths = []
+        for i in ["north", "south", "east", "west"]:
+            if self.rooms[self.room][i]:
+                paths.append(i)
+        if paths:
+            room_info += "\n\nPaths lie to the {}.".format(", ".join(paths))
+
+        # cuz: whitespace!
+        room_info += "\n"
+
+        return room_info
+
 
     def greet(self):
         """
@@ -132,6 +179,7 @@ class Server(object):
             self.room_description(self.room)
         )
 
+
     def get_input(self):
         """
         Retrieve input from the client_connection. Store at most 32 characters of
@@ -143,10 +191,9 @@ class Server(object):
         :return: None 
         """
 
-        # TODO: YOUR CODE HERE
-
         # get info 
         self.input_buffer = self.client_connection.recv(32).decode()
+
 
     def move(self, argument):
         """
@@ -169,15 +216,19 @@ class Server(object):
         :return: None
         """
 
-        # TODO: YOUR CODE HERE
+        # in which direction do they wish to move
         direction = argument[0]
+
+        # what room is in that direction
         new_room = self.rooms[self.room][direction]
 
+        # if there is no room in the desired direction, the path will be false
         if new_room:
             self.room = new_room
             self.output_buffer = self.room_description(self.room)
         else:
-            self.output_buffer = "Ouch!  You run into a wall."
+            self.output_buffer = "\n\nOuch!  You ran into a wall!\n"
+
 
     def say(self, argument):
         """
@@ -193,8 +244,8 @@ class Server(object):
         :return: None
         """
 
-        # TODO: YOUR CODE HERE
-        self.output_buffer = 'You say, "{}".'.format(argument)
+        self.output_buffer = '\n\nYou say, "{}".  (wabba wabba, whee, wok!)\n'.format(" ".join(argument))
+
 
     def quit(self, argument):
         """
@@ -208,8 +259,9 @@ class Server(object):
         :return: None
         """
 
-        # TODO: YOUR CODE HERE
-        self.output_buffer = "I'm sorry, I can't do that Dave."
+        self.done = True
+        self.output_buffer = "\n\nIf you must!  (Goodbye!)\n"
+
 
     def route(self):
         """
@@ -222,12 +274,12 @@ class Server(object):
         
         :return: None
         """
+
+        # break up the input into a command and argument(s)
         command = self.input_buffer.split(" ")[0]
         arguments = self.input_buffer.split(" ")[1:]
 
-        print("DEBUG", command, arguments)
-
-        # TODO: YOUR CODE HERE
+        # very meta
         try:
             { "quit": self.quit,
               "move": self.move,
@@ -235,18 +287,148 @@ class Server(object):
               "look": self.look,
               "debug": self.debug,
               "quit": self.quit,
+              "inventory": self.inventory,
+              "light": self.light,
+              "get": self.get,
+              "drop": self.drop,
+              "help": self.help,
+              "go": self.go,
+              "north": self.north,
+              "south": self.south,
+              "west": self.west,
+              "east": self.east,
             }.get(command)(arguments)
+        except TypeError:
+            # bad command
+            self.output_buffer = "\n\n{}!????  Adjust your Babblefish!\n".format(self.input_buffer)
         except Exception as err:
-            self.usage(err)
+            # bad programmer
+            self.output_buffer = "\n\nFrozzle, Frozzle, {}, when {}!\n".format(err,self.input_buffer)
 
-    def usage(self, extra=""):
-        self.output_buffer = "doof! {}".format(extra)
+        if not self.done:
+            # if we are in a dark room without a lit candle, count down for grue
+            if self.rooms[str(self.room)]["dark"] and not self.lit_candle:
+                if self.dark_count <= 2:
+                    self.output_buffer += "\nYou are likely to be eaten by a grue!\n"
+                if self.dark_count <= 0:
+                    self.output_buffer = "\nYou have been eaten by a grue!!!\n"
+                    self.done = True
+                self.dark_count -= 1
+            else:
+                # reset the grue counter
+                self.dark_count = 4
+
+    def go(self, argument):
+        self.move(argument)
+
+    def north(self, argument):
+        self.move(["north"])
+
+    def south(self, argument):
+        self.move(["south"])
+
+    def east(self, argument):
+        self.move(["east"])
+
+    def west(self, argument):
+        self.move(["west"])
+
+    def get_inv(self, query):
+        """
+        utility function to return objects in a room per person
+        """
+        inv = []
+        for object in self.objects:
+            owner = self.objects[object]
+            if owner == query:
+                inv.append(object)
+        return inv
+
+
+    def inventory(self, argument):
+        """
+        display player inventory
+        """
+        inv = self.get_inv("player")
+        if inv:
+            self.output_buffer = "\n\nYour magic bag contains: {}\n".format(", ".join(inv))
+        else:
+            self.output_buffer = "\n\nYour magic bag is empty.  :-(\n"
+
+
+    def light(self, argument):
+        """
+        light the candle
+        """
+        requested_object = argument[0]
+        avail_objects = self.get_inv("player")
+        if requested_object == "candle":
+            self.lit_candle = True
+            self.output_buffer = "\n\nThe candle flickers to life.\n"
+        else:
+            self.output_buffer = "\n\nYou can't light a {}, silly!\n".format(" ".join(argument))
+
+
+    def get(self, argument):
+        """
+        get an object
+        """
+        requested_object = argument[0]
+        avail_objects = self.get_inv(self.room)
+        if requested_object in avail_objects:
+            self.objects[requested_object]="player"
+            self.output_buffer = "\n\nYou put the {} in your magic bag.\n".format(requested_object)
+        else:
+            self.output_buffer = "\n\nNice try, bozo!\n"
+
+
+    def drop(self, argument):
+        """
+        drop an object
+        """
+        requested_object = argument[0]
+        avail_objects = self.get_inv("player")
+        if requested_object in avail_objects:
+            self.objects[requested_object]=str(self.room)
+            self.output_buffer = "\n\nYou drop the {} like a limp mackerel.\n".format(requested_object)
+        else:
+            self.output_buffer = "\n\nYou fail to conjure a {} from thin air.\n".format(requested_object)
+
 
     def look(self, argument):
+        """
+        see what's around
+        """
         self.output_buffer = self.room_description(self.room)
 
+
+    def help(self, argument):
+        """
+        take pitty(ish)
+        """
+        if not argument:
+            self.output_buffer = "\n\nWhat's the magic word?!\n"
+        else:
+            if argument[0] == "please":
+                self.output_buffer = "\n\nTry an action/subject pair, like 'move south', or just an action, like 'look'.\n"
+            else:
+                self.output_buffer = "\n\nI can't hear you!\n"
+
+
     def debug(self, argument):
-        print("DEBUG",self.room)
+        """
+        see what's what
+        """
+        print("DEBUG addr:",self.myaddr)
+        print("DEBUG port:",self.port)
+        print("DEBUG room:",self.room)
+        print("DEBUG done:",self.done)
+        print("DEBUG lit_candle:",self.lit_candle)
+        print("DEBUG dark_count:",self.dark_count)
+        print("DEBUG objects:",self.objects)
+        print("DEBUG rooms:",self.rooms)
+        self.output_buffer = "\n"
+
 
     def push_output(self):
         """
@@ -256,9 +438,8 @@ class Server(object):
         
         :return: None 
         """
+        self.client_connection.sendall(("OK!  " + self.output_buffer).encode("utf-8"))
 
-        # TODO: YOUR CODE HERE
-        self.client_connection.sendall(("OK! " + self.output_buffer).encode("utf-8"))
 
     def serve(self):
         self.connect()
@@ -272,5 +453,6 @@ class Server(object):
             self.route()
             self.push_output()
 
+        print("Server: goodbye!")
         self.client_connection.close()
         self.socket.close()
