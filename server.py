@@ -475,15 +475,16 @@ class Server(object):
         """
         see what's what
         """
-        print("DEBUG addr:",self.myaddr)
-        print("DEBUG port:",self.port)
-        print("DEBUG room:",self.room)
-        print("DEBUG done:",self.done)
-        print("DEBUG lit_candle:",self.lit_candle)
-        print("DEBUG dark_count:",self.dark_count)
-        print("DEBUG objects:",self.objects)
-        print("DEBUG rooms:",self.rooms)
-        self.output_buffer = "\n"
+        info = "\n"
+        info += "\nDEBUG addr: {}".format(self.myaddr)
+        info += "\nDEBUG port: {}".format(self.port)
+        info += "\nDEBUG room: {}".format(self.room)
+        info += "\nDEBUG done: {}".format(self.done)
+        info += "\nDEBUG lit_candle: {}".format(self.lit_candle)
+        info += "\nDEBUG dark_count: {}".format(self.dark_count)
+        info += "\nDEBUG objects: {}".format(self.objects)
+        info += "\nDEBUG rooms: {}\n".format(self.rooms)
+        self.output_buffer = info
 
 
     def push_output(self):
