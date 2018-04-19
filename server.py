@@ -362,7 +362,8 @@ class Server(object):
                 if self.dark_count <= 2:
                     self.output_buffer += "\nYou are likely to be eaten by a grue!\n"
                 if self.dark_count <= 0:
-                    self.output_buffer = "\nYou have been eaten by a grue!!!\n"
+                    self.output_buffer = "\n\nYou have been eaten by a grue!!!\n"
+                    self.output_buffer += "Goodbye!\n"
                     self.done = True
                 self.dark_count -= 1
             else:
@@ -447,6 +448,9 @@ class Server(object):
         if requested_object in avail_objects:
             self.objects[requested_object]=str(self.room)
             self.output_buffer = "\n\nYou drop the {} like a limp mackerel.\n".format(requested_object)
+            if requested_object == "candle":
+                self.lit_candle = False
+                self.output_buffer += "The candle goes out.\n"
         else:
             self.output_buffer = "\n\nYou fail to conjure a {} from thin air.\n".format(requested_object)
 
