@@ -51,8 +51,36 @@ class Server(object):
         self.socket = None
         self.client_connection = None
         self.port = port
-
-        self.room = 0
+        self.room = "0"
+        self.rooms = { "0": { "name": "The Foyer",
+                              "desc": "a grand foyer, all pink.",
+                              "north": "3",
+                              "south": False,
+                              "east": "2",
+                              "west": "1",
+                              "things": [] },
+                       "1": { "name": "The Kitchen",
+                              "desc": "a large kitchen, dirty and gray.",
+                              "north": False,
+                              "south": False,
+                              "east": "0",
+                              "west": False,
+                              "things": [] },
+                       "2": { "name": "The Library",
+                              "desc": "a musty library, with wooden floors.",
+                              "north": False,
+                              "south": False,
+                              "east": False,
+                              "west": "0",
+                              "things": [] },
+                       "3": { "name": "The Fountain",
+                              "desc": "a grand fountain, broken and dry.",
+                              "north": False,
+                              "south": "0",
+                              "east": False,
+                              "west": False,
+                              "things": [] },
+                               }
 
     def connect(self):
         self.socket = socket.socket(
@@ -60,11 +88,19 @@ class Server(object):
             socket.SOCK_STREAM,
             socket.IPPROTO_TCP)
 
-        address = ('127.0.0.1', self.port)
+        # hack to figure out my outgoing ip address
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        self.myaddr = s.getsockname()[0]
+        s.close()
+
+        address = ('0.0.0.0', self.port)
         self.socket.bind(address)
         self.socket.listen(1)
 
         self.client_connection, address = self.socket.accept()
+
+        print("server running at {} on {}".format(self.myaddr, self.port))
 
     def room_description(self, room_number):
         """
@@ -80,7 +116,7 @@ class Server(object):
 
         # TODO: YOUR CODE HERE
 
-        pass
+        return 'You are in {name}.  You see {desc}'.format(**self.rooms[str(room_number)])
 
     def greet(self):
         """
@@ -109,7 +145,8 @@ class Server(object):
 
         # TODO: YOUR CODE HERE
 
-        pass
+        # get info 
+        self.input_buffer = self.client_connection.recv(32).decode()
 
     def move(self, argument):
         """
@@ -133,8 +170,14 @@ class Server(object):
         """
 
         # TODO: YOUR CODE HERE
+        direction = argument[0]
+        new_room = self.rooms[self.room][direction]
 
-        pass
+        if new_room:
+            self.room = new_room
+            self.output_buffer = self.room_description(self.room)
+        else:
+            self.output_buffer = "Ouch!  You run into a wall."
 
     def say(self, argument):
         """
@@ -151,8 +194,7 @@ class Server(object):
         """
 
         # TODO: YOUR CODE HERE
-
-        pass
+        self.output_buffer = 'You say, "{}".'.format(argument)
 
     def quit(self, argument):
         """
@@ -167,8 +209,7 @@ class Server(object):
         """
 
         # TODO: YOUR CODE HERE
-
-        pass
+        self.output_buffer = "I'm sorry, I can't do that Dave."
 
     def route(self):
         """
@@ -181,10 +222,31 @@ class Server(object):
         
         :return: None
         """
+        command = self.input_buffer.split(" ")[0]
+        arguments = self.input_buffer.split(" ")[1:]
+
+        print("DEBUG", command, arguments)
 
         # TODO: YOUR CODE HERE
+        try:
+            { "quit": self.quit,
+              "move": self.move,
+              "say": self.say,
+              "look": self.look,
+              "debug": self.debug,
+              "quit": self.quit,
+            }.get(command)(arguments)
+        except Exception as err:
+            self.usage(err)
 
-        pass
+    def usage(self, extra=""):
+        self.output_buffer = "doof! {}".format(extra)
+
+    def look(self, argument):
+        self.output_buffer = self.room_description(self.room)
+
+    def debug(self, argument):
+        print("DEBUG",self.room)
 
     def push_output(self):
         """
@@ -196,8 +258,7 @@ class Server(object):
         """
 
         # TODO: YOUR CODE HERE
-
-        pass
+        self.client_connection.sendall(("OK! " + self.output_buffer).encode("utf-8"))
 
     def serve(self):
         self.connect()
@@ -205,6 +266,8 @@ class Server(object):
         self.push_output()
 
         while not self.done:
+            self.input_buffer = ""
+            self.output_buffer = ""
             self.get_input()
             self.route()
             self.push_output()
