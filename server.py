@@ -57,7 +57,7 @@ class Server(object):
         self.room = "0"
         self.lit_candle = False
         self.dark_count = 4
-        self.objects = { "candle": "2", "pebble": "3" }
+        self.objects = { "candle": "2", "pebble": "3", "scroll": "4" }
         self.rooms = { "0": { "name": "Foyer",
                               "desc": "a grand foyer, all pink",
                               "north": "3",
@@ -86,6 +86,13 @@ class Server(object):
                               "east": False,
                               "west": False,
                               "dark": False },
+                       "4": { "name": "Cave",
+                              "desc": "a dark cave with paintings on the walls",
+                              "north": False,
+                              "south": False,
+                              "east": False,
+                              "west": False,
+                              "dark": True }
                                }
 
         # hack to figure out my outgoing ip address
@@ -178,6 +185,8 @@ class Server(object):
                 room_info += "A path lies to the {}.".format(", ".join(paths))
             else:
                 room_info += "Paths lie to the {}.".format(", ".join(paths))
+        else:
+            room_info += "\n\nThere are no obvious exits."
 
         # cuz: whitespace!
         room_info += "\n"
@@ -250,6 +259,24 @@ class Server(object):
             self.output_buffer = "\n\nOuch!  You ran into a wall!\n"
 
 
+    def teleport(self, argument):
+        """
+        magic!
+        """
+        if argument:
+            where = argument[0]
+            try:
+                self.room = where
+                self.room_description(self.room)
+                self.output_buffer += "\n\nA cloud of smoke dissipates.\n"
+            except KeyError:
+                self.output_buffer = "\n\nPoof!  You teleport into a rock!\n"
+                self.output_buffer += "Goodbye!\n"
+                self.done = True
+        else:
+            self.output_buffer = "\n\nTricks are for rabbits!\n"
+
+
     def say(self, argument):
         """
         Lets the client speak by putting their utterance into the output buffer.
@@ -306,6 +333,7 @@ class Server(object):
         try:
             { "quit": self.quit,
               "move": self.move,
+              "teleport": self.teleport,
               "say": self.say,
               "look": self.look,
               "debug": self.debug,
@@ -326,7 +354,7 @@ class Server(object):
             self.output_buffer = "\n\n{}!????  Adjust your Babblefish!\n".format(self.input_buffer)
         except Exception as err:
             # bad programmer
-            self.output_buffer = "\n\nFrozzle, Frozzle, {}, when {}!\n".format(err,self.input_buffer)
+            self.output_buffer = "\n\nFrozzle, Frozzle, --{}--, when {}!\n".format(err,self.input_buffer)
 
         if not self.done:
             # if we are in a dark room without a lit candle, count down for grue
