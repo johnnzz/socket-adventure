@@ -221,7 +221,7 @@ class Server(object):
         """
 
         # get info 
-        self.input_buffer = self.client_connection.recv(32).decode()
+        self.input_buffer = self.client_connection.recv(120).decode()
 
 
     def move(self, argument):
@@ -295,14 +295,10 @@ class Server(object):
         :return: None
         """
         try:
-            simon_sez = self.chatbot.get_response(self.input_buffer)
+            simon_sez = self.chatbot.get_response(" ".join(self.input_buffer.split()[1:]))
             self.output_buffer = "\n\n{}\n".format(simon_sez)
         except Exception as err:
             self.output_buffer = '\n\nYou say, "{}".  (wabba wabba, whee, wok!)\n'.format(" ".join(argument))
-
-
-    def exit(self, argument):
-        self.quit(argument)
 
 
     def quit(self, argument):
@@ -378,20 +374,26 @@ class Server(object):
                 # reset the grue counter
                 self.dark_count = 4
 
+
     def go(self, argument):
         self.move(argument)
+
 
     def north(self, argument):
         self.move(["north"])
 
+
     def south(self, argument):
         self.move(["south"])
+
 
     def east(self, argument):
         self.move(["east"])
 
+
     def west(self, argument):
         self.move(["west"])
+
 
     def get_inv(self, query):
         """
@@ -425,42 +427,54 @@ class Server(object):
         """
         light the candle
         """
-        requested_object = argument[0]
-        avail_objects = self.get_inv("player")
-        if requested_object == "candle":
-            self.lit_candle = True
-            self.output_buffer = "\n\nThe candle flickers to life.\n"
+        if argument:
+            requested_object = argument[0]
+            avail_objects = self.get_inv("player")
+            if requested_object == "candle":
+                if "candle" in avail_objects:
+                    self.lit_candle = True
+                    self.output_buffer = "\n\nThe candle flickers to life.\n"
+                else:
+                    self.output_buffer = "\n\nSmokem if you gottem, but you no gottem.\n"
+            else:
+                self.output_buffer = "\n\nYou can't light a {}, silly!\n".format(" ".join(argument))
         else:
-            self.output_buffer = "\n\nYou can't light a {}, silly!\n".format(" ".join(argument))
+            self.output_buffer = "\n\nYou thought you caught a flash out of the corner of your eye, but you can't be sure.\n"
 
 
     def get(self, argument):
         """
         get an object
         """
-        requested_object = argument[0]
-        avail_objects = self.get_inv(self.room)
-        if requested_object in avail_objects:
-            self.objects[requested_object]="player"
-            self.output_buffer = "\n\nYou put the {} in your magic bag.\n".format(requested_object)
+        if argument:
+            requested_object = argument[0]
+            avail_objects = self.get_inv(self.room)
+            if requested_object in avail_objects:
+                self.objects[requested_object]="player"
+                self.output_buffer = "\n\nYou put the {} in your magic bag.\n".format(requested_object)
+            else:
+                self.output_buffer = "\n\nNice try, bozo!\n"
         else:
-            self.output_buffer = "\n\nNice try, bozo!\n"
+            self.output_buffer = "\n\nYour hands grasp wildly at the empty air!\n"
 
 
     def drop(self, argument):
         """
         drop an object
         """
-        requested_object = argument[0]
-        avail_objects = self.get_inv("player")
-        if requested_object in avail_objects:
-            self.objects[requested_object]=str(self.room)
-            self.output_buffer = "\n\nYou drop the {} like a limp mackerel.\n".format(requested_object)
-            if requested_object == "candle":
-                self.lit_candle = False
-                self.output_buffer += "The candle goes out.\n"
+        if argument:
+            requested_object = argument[0]
+            avail_objects = self.get_inv("player")
+            if requested_object in avail_objects:
+                self.objects[requested_object]=str(self.room)
+                self.output_buffer = "\n\nYou drop the {} like a limp mackerel.\n".format(requested_object)
+                if requested_object == "candle":
+                    self.lit_candle = False
+                    self.output_buffer += "The candle goes out.\n"
+            else:
+                self.output_buffer = "\n\nYou fail to conjure a {} from thin air.\n".format(requested_object)
         else:
-            self.output_buffer = "\n\nYou fail to conjure a {} from thin air.\n".format(requested_object)
+            self.output_buffer = "\n\nYou drop, duck and cover, then get up again.\n"
 
 
     def look(self, argument):
