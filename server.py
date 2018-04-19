@@ -57,7 +57,7 @@ class Server(object):
         self.room = "0"
         self.lit_candle = False
         self.dark_count = 4
-        self.objects = { "candle": "2" }
+        self.objects = { "candle": "2", "pebble": "3" }
         self.rooms = { "0": { "name": "Foyer",
                               "desc": "a grand foyer, all pink",
                               "north": "3",
@@ -172,7 +172,12 @@ class Server(object):
             if self.rooms[self.room][i]:
                 paths.append(i)
         if paths:
-            room_info += "\n\nPaths lie to the {}.".format(", ".join(paths))
+            # because it bugs me
+            room_info += "\n\n"
+            if len(paths) == 1:
+                room_info += "A path lies to the {}.".format(", ".join(paths))
+            else:
+                room_info += "Paths lie to the {}.".format(", ".join(paths))
 
         # cuz: whitespace!
         room_info += "\n"
