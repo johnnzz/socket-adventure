@@ -370,6 +370,11 @@ class Server(object):
         inv = self.get_inv("player")
         if inv:
             self.output_buffer = "\n\nYour magic bag contains: {}\n".format(", ".join(inv))
+            if "candle" in inv:
+                if self.lit_candle:
+                    self.output_buffer += "The candle throws a dim, flickering light on the walls.\n"
+                else:
+                    self.output_buffer += "The candle is unlit.\n"
         else:
             self.output_buffer = "\n\nYour magic bag is empty.  :-(\n"
 

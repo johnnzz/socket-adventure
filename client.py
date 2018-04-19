@@ -8,7 +8,11 @@ except IndexError:
     exit(-1)
 
 client_socket = socket.socket()
-client_socket.connect(("127.0.0.1", port))
+try:
+    client_socket.connect(("127.0.0.1", port))
+except ConnectionRefusedError:
+    print("You need to start the server first.")
+    sys.exit(0)
 
 while True:
     response = client_socket.recv(4096).decode()
